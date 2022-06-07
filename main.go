@@ -13,40 +13,6 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 }
 
-func startUrlInBrowser(browserPath, url string) error {
-	cmd := exec.Command(browserPath, url)
-	err := cmd.Start()
-	return err
-}
-
-func handleEdge(w http.ResponseWriter, r *http.Request) {
-	exe := "/usr/bin/microsoft-edge-dev"
-	query := r.URL.Query()
-	url := query.Get("url")
-	cmd_str := fmt.Sprintf("%s %s", exe, url)
-
-	err := startUrlInBrowser(exe, url)
-	if err != nil {
-		log.Printf("Could not start '%s', Error: %q", cmd_str, err)
-	} else {
-		log.Printf("Edge: %s", url)
-	}
-}
-
-func handleChrome(w http.ResponseWriter, r *http.Request) {
-	exe := "/usr/bin/google-chrome"
-	query := r.URL.Query()
-	url := query.Get("url")
-	cmd_str := fmt.Sprintf("%s %s", exe, url)
-
-	err := startUrlInBrowser(exe, url)
-	if err != nil {
-		log.Printf("Could not start '%s', Error: %q", cmd_str, err)
-	} else {
-		log.Printf("Chrome: %s", url)
-	}
-}
-
 func handleKonsole(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("here!")
 	exe := "/usr/bin/konsole"
@@ -78,6 +44,7 @@ func main() {
 	http.HandleFunc("/_api/v1/edge", handleEdge)
 	http.HandleFunc("/_api/v1/chrome", handleChrome)
 	http.HandleFunc("/_api/v1/konsole", handleKonsole)
+	http.HandleFunc("/_api/v1/browse", handleBrowse)
 
 	log.Printf("Listening on port %d", port)
 	log.Fatal(http.ListenAndServe(portStr, nil))
