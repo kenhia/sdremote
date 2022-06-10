@@ -7,27 +7,16 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 )
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 }
 
-func handleKonsole(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("here!")
-	exe := "/usr/bin/konsole"
-	query := r.URL.Query()
-	workdir := query.Get("workdir")
-	if len(workdir) == 0 {
-		workdir = os.Getenv("HOME")
-	}
-	cmd := exec.Command(exe, "--workdir", workdir)
-	err := cmd.Start()
-	if err != nil {
-		log.Printf("Could not start '%s', Error: %q", exe, err)
-	} else {
-		log.Printf("Konsole: %s", workdir)
-	}
+func cleanup() {
+	// Nothing to do for now
 }
 
 func main() {
@@ -40,12 +29,18 @@ func main() {
 	}
 	fmt.Printf("The date is %s\n", out)
 
-	http.HandleFunc("/", handleRequest)
-	http.HandleFunc("/_api/v1/edge", handleEdge)
-	http.HandleFunc("/_api/v1/chrome", handleChrome)
-	http.HandleFunc("/_api/v1/konsole", handleKonsole)
-	http.HandleFunc("/_api/v1/browse", handleBrowse)
+	router := NewRouter()
+
+	// Handle CTRL-C as method for terminating the server nicely
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cleanup()
+		fmt.Println("\n\nCTRL-C pressed; stopping now. bye!")
+		os.Exit(0)
+	}()
 
 	log.Printf("Listening on port %d", port)
-	log.Fatal(http.ListenAndServe(portStr, nil))
+	log.Fatal(http.ListenAndServe(portStr, router))
 }
