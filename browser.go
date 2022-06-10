@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os/exec"
 )
@@ -24,22 +23,62 @@ func browserNameToExe(browser string) (exe string) {
 	return
 }
 
-func startUrlInBrowser(browserPath, url string) (err error) {
+func startUrlInBrowser(browserPath, url, tag string, w http.ResponseWriter) {
 	cmd := exec.Command(browserPath, url)
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
-		log.Printf("Browse: ERROR - could not start '%s %s'\n", browserPath, url)
-	} else {
-		log.Printf("Browse: %s %s\n", browserPath, url)
+		errorCouldNotBrowseToURL(tag, w, err)
+		return
 	}
+	respondStatusOK(w)
+}
+
+func getUrlAndBrowserExeFromQuery(r *http.Request, browserDefault string) (url string, browserExe string) {
+	query := r.URL.Query()
+	url = query.Get("url")
+	browser := query.Get("browser")
+	if browser == "" {
+		browser = browserDefault
+	}
+	browserExe = browserNameToExe(browser)
 	return
+}
+
+func handleBrowseGet(w http.ResponseWriter, r *http.Request) {
+	tag := "Browse GET"
+	url, exe := getUrlAndBrowserExeFromQuery(r, "")
+	if url == "" {
+		errorNoURLSupplied(tag, w)
+		return
+	}
+	startUrlInBrowser(exe, url, tag, w)
+}
+
+func handleEdge(w http.ResponseWriter, r *http.Request) {
+	tag := "Edge GET"
+	url, exe := getUrlAndBrowserExeFromQuery(r, "edge")
+	if url == "" {
+		errorNoURLSupplied(tag, w)
+		return
+	}
+	startUrlInBrowser(exe, url, tag, w)
+}
+
+func handleChrome(w http.ResponseWriter, r *http.Request) {
+	tag := "Chrome GET"
+	url, exe := getUrlAndBrowserExeFromQuery(r, "chrome")
+	if url == "" {
+		errorNoURLSupplied(tag, w)
+		return
+	}
+	startUrlInBrowser(exe, url, tag, w)
 }
 
 func handleBrowsePost(w http.ResponseWriter, r *http.Request) {
 	tag := "Browse POST"
 	var browseRequest BrowseRequest
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		errorReadingJsonBody(tag, w, err)
 		return
@@ -53,62 +92,6 @@ func handleBrowsePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exePath := browserNameToExe(browseRequest.Browser)
-	if err = startUrlInBrowser(exePath, browseRequest.Url); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	respondStatusOK(w)
-}
-
-func handleBrowseGet(w http.ResponseWriter, r *http.Request) {
-	tag := "Browse GET"
-	query := r.URL.Query()
-	url := query.Get("url")
-	if url == "" {
-		errorNoURLSupplied(tag, w)
-		return
-	}
-	browser := query.Get("browser")
-	exe := browserNameToExe(browser)
-
-	if err := startUrlInBrowser(exe, url); err != nil {
-		errorCouldNotBrowseToURL(tag, w, err)
-		return
-	}
-	respondStatusOK(w)
-}
-
-func handleEdge(w http.ResponseWriter, r *http.Request) {
-	tag := "Edge GET"
-	exe := browserNameToExe("edge")
-	query := r.URL.Query()
-	url := query.Get("url")
-	if url == "" {
-		errorNoURLSupplied(tag, w)
-		return
-	}
-
-	if err := startUrlInBrowser(exe, url); err != nil {
-		errorCouldNotBrowseToURL(tag, w, err)
-		return
-	}
-	respondStatusOK(w)
-}
-
-func handleChrome(w http.ResponseWriter, r *http.Request) {
-	tag := "Chrome GET"
-	exe := browserNameToExe("chrome")
-	query := r.URL.Query()
-	url := query.Get("url")
-	if url == "" {
-		errorNoURLSupplied(tag, w)
-		return
-	}
-
-	if err := startUrlInBrowser(exe, url); err != nil {
-		errorCouldNotBrowseToURL(tag, w, err)
-		return
-	}
-	respondStatusOK(w)
+	exe := browserNameToExe(browseRequest.Browser)
+	startUrlInBrowser(exe, browseRequest.Url, tag, w)
 }
