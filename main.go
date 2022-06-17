@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 )
@@ -23,11 +22,6 @@ func main() {
 	port := 8027
 	portStr := fmt.Sprintf(":%d", port)
 	fmt.Println("sdremote - v0.0.1")
-	out, err := exec.Command("date").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("The date is %s\n", out)
 
 	router := NewRouter()
 
