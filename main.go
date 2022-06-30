@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"html"
 	"log"
@@ -18,8 +19,18 @@ func cleanup() {
 	// Nothing to do for now
 }
 
+var (
+	port int
+)
+
+func handleCommandLine() {
+	flag.IntVar(&port, "port", 8027, "port to use (default: 8027)")
+	flag.Parse()
+}
+
 func main() {
-	port := 8027
+	handleCommandLine()
+
 	portStr := fmt.Sprintf(":%d", port)
 	fmt.Println("sdremote - v0.0.1")
 
